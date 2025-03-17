@@ -3,6 +3,8 @@ import numpy as np
 from typing import List, Dict, Tuple, Union
 from numpy.typing import ArrayLike
 
+#Assisted by ChatGPT
+
 class NeuralNetwork:
     """
     This is a class that generates a fully-connected neural network.
@@ -106,7 +108,7 @@ class NeuralNetwork:
             Z_curr: ArrayLike
                 Current layer linear transformed matrix.
         """
-        Z_curr = np.dot(W_curr, A_prev) + b_curr
+        Z_curr = np.dot(A_prev, W_curr) + b_curr
 
         if activation.lower() == 'sigmoid':
             A_curr = self._sigmoid(Z_curr)
@@ -135,17 +137,22 @@ class NeuralNetwork:
         # Initialize cache
         cache = {}
 
+        A_curr = X
+
         for idx, layer in enumerate(self.arch):
             layer_idx = idx + 1
-            W_curr = self._param_dict['W' + str(layer_idx)]
-            b_curr = self._param_dict['b' + str(layer_idx)]
+            W_curr = self._param_dict['W' + str(layer_idx)].T
+            b_curr = self._param_dict['b' + str(layer_idx)].T
 
-            cache['A' + str(layer_idx)] = X
+            # Store the current activation in cache
+            cache['A' + str(layer_idx)] = A_curr
 
-            X, Z_curr = self._single_forward(W_curr, b_curr, X, layer['activation'])
+            # Perform forward pass for current layer
+            A_curr, Z_curr = self._single_forward(W_curr, b_curr, A_curr, layer['activation'])
             cache['Z' + str(layer_idx)] = Z_curr
-        
-        return X, cache
+
+        # Return the final output (transposed back to original shape) and cache
+        return A_curr, cache
     
 
     def _single_backprop(
@@ -182,16 +189,20 @@ class NeuralNetwork:
             db_curr: ArrayLike
                 Partial derivative of loss function with respect to current layer bias matrix.
         """
+        # print(f'dA_curr shape: {dA_curr.shape}')
+        # print(f'Z_curr shape: {Z_curr.shape}')
+        # print(f'A_prev shape: {A_prev.shape}')
+
         if activation_curr.lower() == 'sigmoid':
-            dZ_curr = self._sigmoid_backprop(dA_curr, Z_curr)
+            dA_curr = self._sigmoid_backprop(dA_curr, Z_curr)
         elif activation_curr.lower() == 'relu':
-            dZ_curr = self._relu_backprop(dA_curr, Z_curr)
+            dA_curr = self._relu_backprop(dA_curr, Z_curr)
         else:
             raise ValueError(f"Unsupported activation function: {activation_curr}")
 
-        dW_curr = np.dot(dZ_curr, A_prev.T) / A_prev.shape[1]
-        db_curr = np.sum(dZ_curr, axis=1, keepdims=True) / A_prev.shape[1]
-        dA_prev = np.dot(W_curr.T, dZ_curr)
+        dW_curr = (np.dot(A_prev.T, dA_curr) / A_prev.shape[1]).T
+        db_curr = np.sum(dA_curr, axis=1, keepdims=True) / A_prev.shape[1]
+        dA_prev = np.dot(dA_curr, W_curr)
 
         return dA_prev, dW_curr, db_curr
 
@@ -226,12 +237,12 @@ class NeuralNetwork:
             raise ValueError(f"Unsupported loss function: {self._loss_func}")
 
         # Backprop through each layer
-        for idx in reversed(range(last_layer_idx)):
+        for idx in reversed(range(0, last_layer_idx)):
             layer_idx = idx + 1
             W_curr = self._param_dict['W' + str(layer_idx)]
             b_curr = self._param_dict['b' + str(layer_idx)]
-            A_prev = cache['A' + str(idx)]
-            Z_curr = cache['Z' + str(last_layer_idx)]
+            A_prev = cache['A' + str(layer_idx)]
+            Z_curr = cache['Z' + str(layer_idx)]
 
             dA_curr, dW_curr, db_curr = self._single_backprop(
                 W_curr,
@@ -423,6 +434,8 @@ class NeuralNetwork:
             loss: float
                 Average loss over mini-batch.
         """
+        #Protect against zero division
+        y_hat = np.clip(y_hat, 1e-15, 1 - 1e-15)
         return -np.mean(y * np.log(y_hat) + (1 - y) * np.log(1 - y_hat))
 
     def _binary_cross_entropy_backprop(self, y: ArrayLike, y_hat: ArrayLike) -> ArrayLike:

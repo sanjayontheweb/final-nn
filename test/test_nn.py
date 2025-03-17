@@ -2,13 +2,16 @@
 import numpy as np
 import pytest
 from nn.nn import NeuralNetwork 
+from nn.preprocess import sample_seqs, one_hot_encode_seqs
+
+#Assisted by ChatGPT
 
 def test_single_forward():
     # Initialize a simple neural network
     nn_arch = [
         {"input_dim": 3, "output_dim": 2, "activation": "relu"}
     ]
-    nn = NeuralNetwork(nn_arch, lr=0.01, seed=42, batch_size=1, epochs=1, loss_function="mse")
+    nn = NeuralNetwork(nn_arch, lr=0.01, seed=42, batch_size=1, epochs=1, loss_function="mean_squared_error")
     
     # Create test inputs
     W = np.array([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])  # 2x3 matrix
@@ -43,7 +46,7 @@ def test_forward():
         {"input_dim": 3, "output_dim": 2, "activation": "relu"},
         {"input_dim": 2, "output_dim": 1, "activation": "sigmoid"}
     ]
-    nn = NeuralNetwork(nn_arch, lr=0.01, seed=42, batch_size=1, epochs=1, loss_function="mse")
+    nn = NeuralNetwork(nn_arch, lr=0.01, seed=42, batch_size=1, epochs=1, loss_function="mean_squared_error")
     
     # Create test input
     X = np.array([[1], [2], [3]])  # 3x1 input matrix
@@ -75,7 +78,7 @@ def test_single_backprop():
     nn_arch = [
         {"input_dim": 3, "output_dim": 2, "activation": "relu"}
     ]
-    nn = NeuralNetwork(nn_arch, lr=0.01, seed=42, batch_size=1, epochs=1, loss_function="mse")
+    nn = NeuralNetwork(nn_arch, lr=0.01, seed=42, batch_size=1, epochs=1, loss_function="mean_squared_error")
     
     # Create test inputs
     W_curr = np.array([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])  # 2x3 matrix
@@ -125,7 +128,7 @@ def test_predict():
     nn_arch = [
         {"input_dim": 3, "output_dim": 2, "activation": "relu"}
     ]
-    nn = NeuralNetwork(nn_arch, lr=0.01, seed=42, batch_size=1, epochs=1, loss_function="mse")
+    nn = NeuralNetwork(nn_arch, lr=0.01, seed=42, batch_size=1, epochs=1, loss_function="mean_squared_error")
     
     # Create test inputs with simple values
     W_curr = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])  # Simpler 2x3 matrix
@@ -187,7 +190,7 @@ def test_binary_cross_entropy_backprop():
 
 def test_mean_squared_error():
     nn_arch = [{"input_dim": 2, "output_dim": 1, "activation": "sigmoid"}]
-    nn = NeuralNetwork(nn_arch, lr=0.01, seed=42, batch_size=1, epochs=1, loss_function="mse")
+    nn = NeuralNetwork(nn_arch, lr=0.01, seed=42, batch_size=1, epochs=1, loss_function="mean_squared_error")
 
     y = np.array([[1.0], [0.0]])
     y_hat = np.array([[0.8], [0.2]])
@@ -197,7 +200,7 @@ def test_mean_squared_error():
 
 def test_mean_squared_error_backprop():
     nn_arch = [{"input_dim": 2, "output_dim": 1, "activation": "sigmoid"}]
-    nn = NeuralNetwork(nn_arch, lr=0.01, seed=42, batch_size=1, epochs=1, loss_function="mse")
+    nn = NeuralNetwork(nn_arch, lr=0.01, seed=42, batch_size=1, epochs=1, loss_function="mean_squared_error")
 
     y = np.array([[1.0], [0.0]])
     y_hat = np.array([[1.0], [0.0]])
@@ -207,7 +210,15 @@ def test_mean_squared_error_backprop():
     assert dA.shape == y.shape, "Gradient shape mismatch"
 
 def test_sample_seqs():
-    pass
+    sequences = ['ATCG', 'GCTA', 'ATCG', 'GCTA', 'ATCG', 'GCTA']
+    labels = [True, False, True, False, False, False]
+
+    sampled_seqs, sampled_labels = sample_seqs(sequences, labels)
+    assert len(sampled_seqs) == len(sampled_labels), "Sampled sequences and labels lengths do not match"
+    assert sum(sampled_labels) == len(sampled_labels) // 2, "Sampled labels are not balanced"
 
 def test_one_hot_encode_seqs():
-    pass
+    seq = ['AGA','TCT']
+    expected_output = np.array([1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0])
+    output = one_hot_encode_seqs(seq)
+    assert np.array_equal(output, expected_output), "One-hot encoding is incorrect"
