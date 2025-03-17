@@ -1,0 +1,5 @@
+numpy
+logreg
+utils
+pytest
+pandas

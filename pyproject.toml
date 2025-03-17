@@ -1,0 +1,26 @@
+[build-system]
+requires = [
+	"flit_core >=3.2,<4",
+	]
+build-backend = "flit_core.buildapi"
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "."
+]
+
+[project]
+name = "nn"
+authors = [{name = "Sanjay Rangavajjhala", email = "sanjay.rangavajjhala@ucsf.edu"}]
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = ["License :: OSI Approved :: MIT License"]
+dynamic = ["version", "description"]
+dependencies = [
+    "pytest",
+    "numpy",
+    "typing"
+]
+
+[project.urls]
+Home = "https://github.com/sanjayontheweb/HW6-HMM"
