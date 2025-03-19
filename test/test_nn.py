@@ -84,8 +84,8 @@ def test_single_backprop():
     W_curr = np.array([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])  # 2x3 matrix
     b_curr = np.array([[0.1], [0.2]])  # 2x1 matrix
     A_prev = np.array([[1.0], [2.0], [3.0]])  # 3x1 matrix
-    Z_curr = np.array([[1.4], [3.2]])  # 2x1 matrix
-    dA_curr = np.array([[0.2], [0.5]])  # 2x1 matrix
+    Z_curr = np.array([[1], [2]])  # 2x1 matrix
+    dA_curr = np.array([[1], [1]])  # 2x1 matrix
     
     # Test ReLU backprop
     dA_prev, dW_curr, db_curr = nn._single_backprop(
@@ -96,32 +96,48 @@ def test_single_backprop():
     assert dA_prev.shape == (3, 1), "dA_prev shape incorrect"
     assert dW_curr.shape == (2, 3), "dW_curr shape incorrect"
     assert db_curr.shape == (2, 1), "db_curr shape incorrect"
+
+    #manually calculated values
+    expected_dA_prev = np.array([[0.5], [0.7], [0.9]])
+    expected_dW_curr = np.array([[1,2,3],[1,2,3]])
+    expected_db_curr = np.array([[1], [1]])
     
+    # print(f'dA_prev: {dA_prev}, expected_dA_prev: {expected_dA_prev}')
+    assert np.allclose(dA_prev, expected_dA_prev), "dA_prev doesn't match expected value for relu"
+    assert np.allclose(dW_curr, expected_dW_curr), "dW_curr doesn't match expected value for relu"
+    assert np.allclose(db_curr, expected_db_curr), "db_curr doesn't match expected value for relu"
+
+
+
+
+
     # Test Sigmoid backprop
     dA_prev, dW_curr, db_curr = nn._single_backprop(
         W_curr, b_curr, Z_curr, A_prev, dA_curr, "sigmoid"
     )
+
+
+    # Expected gradients
+    sigmoid_Z = 1 / (1 + np.exp(-Z_curr))  # sigmoid(Z)
+    dZ_curr = dA_curr * (sigmoid_Z * (1 - sigmoid_Z))  # (2,1)
+    expected_dW_curr = np.dot(dZ_curr, A_prev.T) / A_prev.shape[1]  # (2,3)
+    expected_db_curr = np.sum(dZ_curr, axis=1, keepdims=True) / A_prev.shape[1]  # (2,1)
+    expected_dA_prev = np.dot(W_curr.T, dZ_curr)  # (3,1)
+
+
+    assert np.allclose(dA_prev, expected_dA_prev), "dA_prev doesn't match expected value for sigmoid"
+    assert np.allclose(dW_curr, expected_dW_curr), "dW_curr doesn't match expected value for sigmoid"
+    assert np.allclose(db_curr, expected_db_curr), "db_curr doesn't match expected value for sigmoid"
     
     # Check shapes again
     assert dA_prev.shape == (3, 1), "dA_prev shape incorrect for sigmoid"
     assert dW_curr.shape == (2, 3), "dW_curr shape incorrect for sigmoid"
     assert db_curr.shape == (2, 1), "db_curr shape incorrect for sigmoid"
     
-    # Test values are in reasonable range
-    assert np.all(np.abs(dW_curr) < 1.0), "dW_curr values too large"
-    assert np.all(np.abs(db_curr) < 1.0), "db_curr values too large"
-    
     # Test invalid activation
     with pytest.raises(ValueError):
         nn._single_backprop(W_curr, b_curr, Z_curr, A_prev, dA_curr, "invalid")
-    
-    # Test zero gradient case
-    dA_curr_zero = np.zeros((2, 1))
-    dA_prev, dW_curr, db_curr = nn._single_backprop(
-        W_curr, b_curr, Z_curr, A_prev, dA_curr_zero, "relu"
-    )
-    assert np.allclose(dW_curr, 0), "Zero gradient case failed for dW"
-    assert np.allclose(db_curr, 0), "Zero gradient case failed for db"
+
 
 def test_predict():
     # Initialize neural network
@@ -219,6 +235,6 @@ def test_sample_seqs():
 
 def test_one_hot_encode_seqs():
     seq = ['AGA','TCT']
-    expected_output = np.array([1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0])
+    expected_output = np.array([[1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0], [0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0]])
     output = one_hot_encode_seqs(seq)
     assert np.array_equal(output, expected_output), "One-hot encoding is incorrect"

@@ -108,7 +108,7 @@ class NeuralNetwork:
             Z_curr: ArrayLike
                 Current layer linear transformed matrix.
         """
-        Z_curr = np.dot(A_prev, W_curr) + b_curr
+        Z_curr = np.dot(W_curr, A_prev) + b_curr
 
         if activation.lower() == 'sigmoid':
             A_curr = self._sigmoid(Z_curr)
@@ -141,8 +141,8 @@ class NeuralNetwork:
 
         for idx, layer in enumerate(self.arch):
             layer_idx = idx + 1
-            W_curr = self._param_dict['W' + str(layer_idx)].T
-            b_curr = self._param_dict['b' + str(layer_idx)].T
+            W_curr = self._param_dict['W' + str(layer_idx)]
+            b_curr = self._param_dict['b' + str(layer_idx)]
 
             # Store the current activation in cache
             cache['A' + str(layer_idx)] = A_curr
@@ -200,9 +200,12 @@ class NeuralNetwork:
         else:
             raise ValueError(f"Unsupported activation function: {activation_curr}")
 
-        dW_curr = (np.dot(A_prev.T, dA_curr) / A_prev.shape[1]).T
-        db_curr = np.sum(dA_curr, axis=1, keepdims=True) / A_prev.shape[1]
-        dA_prev = np.dot(dA_curr, W_curr)
+
+        dW_curr = (np.dot(A_prev, dA_curr.T) / A_prev.shape[1]).T   
+        db_curr = np.sum(dA_curr, axis=1).reshape(b_curr.shape) / A_prev.shape[1]
+
+        dA_prev = np.dot(dA_curr.T, W_curr).T
+        # print(f'dW_curr shape: {dW_curr.shape}, W_curr shape: {W_curr.shape}')
 
         return dA_prev, dW_curr, db_curr
 
@@ -244,7 +247,7 @@ class NeuralNetwork:
             A_prev = cache['A' + str(layer_idx)]
             Z_curr = cache['Z' + str(layer_idx)]
 
-            dA_curr, dW_curr, db_curr = self._single_backprop(
+            dA_prev, dW_curr, db_curr = self._single_backprop(
                 W_curr,
                 b_curr,
                 Z_curr,
@@ -256,6 +259,7 @@ class NeuralNetwork:
             # Store gradients
             grad_dict['dW' + str(layer_idx)] = dW_curr
             grad_dict['db' + str(layer_idx)] = db_curr
+            dA_curr = dA_prev
 
         return grad_dict
 
@@ -317,8 +321,8 @@ class NeuralNetwork:
 
             #Break into batches
             for i in range(0, X_train.shape[0], self._batch_size):
-                X_batch = X_train[i:i + self._batch_size]
-                y_batch = y_train[i:i + self._batch_size]
+                X_batch = X_train[i:i + self._batch_size].T
+                y_batch = y_train[i:i + self._batch_size].T
 
                 y_hat, cache = self.forward(X_batch)
 
@@ -335,11 +339,11 @@ class NeuralNetwork:
                 epoch_losses.append(loss)
             
             if self._loss_func == 'binary_cross_entropy':
-                per_epoch_loss_train.append(np.mean(self._binary_cross_entropy(y_train, self.predict(X_train))))
-                per_epoch_loss_val.append(np.mean(self._binary_cross_entropy(y_val, self.predict(X_val))))
+                per_epoch_loss_train.append(np.mean(self._binary_cross_entropy(y_train.T, self.predict(X_train.T))))
+                per_epoch_loss_val.append(np.mean(self._binary_cross_entropy(y_val.T, self.predict(X_val.T))))
             elif self._loss_func == 'mean_squared_error':
-                per_epoch_loss_train.append(np.mean(self._mean_squared_error(y_train, self.predict(X_train))))
-                per_epoch_loss_val.append(np.mean(self._mean_squared_error(y_val, self.predict(X_val))))
+                per_epoch_loss_train.append(np.mean(self._mean_squared_error(y_train.T, self.predict(X_train.T))))
+                per_epoch_loss_val.append(np.mean(self._mean_squared_error(y_val.T, self.predict(X_val.T))))
             else:
                 raise ValueError(f"Unsupported loss function: {self._loss_func}")
         
@@ -418,6 +422,7 @@ class NeuralNetwork:
             dZ: ArrayLike
                 Partial derivative of current layer Z matrix.
         """
+        # print(f'dA shape: {dA.shape}, Z shape: {Z.shape}')
         return np.where(Z > 0, dA, 0)
 
     def _binary_cross_entropy(self, y: ArrayLike, y_hat: ArrayLike) -> float:

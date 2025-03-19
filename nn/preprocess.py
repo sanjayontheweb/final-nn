@@ -65,7 +65,9 @@ def one_hot_encode_seqs(seq_arr: List[str]) -> ArrayLike:
     encodings = []
 
     for seq in seq_arr:
+        seq_encoding = []
         for nucleotide in seq:
-            encodings.extend(one_hot_dict[nucleotide])
+            seq_encoding.extend(one_hot_dict[nucleotide])
+        encodings.append(seq_encoding)
 
     return np.array(encodings)
